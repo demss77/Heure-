@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pointage">
+<meta name="theme-color" content="#15120E">
+<title>Pointage</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@500;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Manrope', sans-serif; background: radial-gradient(120% 80% at 80% -10%, rgba(232,163,61,0.14), transparent 55%), radial-gradient(90% 60% at -10% 110%, rgba(224,108,79,0.10), transparent 50%), #15120E; color: #F2EBE0; min-height: 100vh; }
+#app { min-height: 100vh; padding: max(18px, env(safe-area-inset-top)) 14px calc(86px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.brand { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 21px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 9px; }
+.brand .dot { width: 11px; height: 11px; border-radius: 50%; background: #E8A33D; box-shadow: 0 0 14px #E8A33D; }
+.tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 12px; }
+.tab { font-family: 'Manrope'; font-weight: 700; font-size: 13px; color: #A89B89; background: none; border: none; padding: 7px 14px; border-radius: 9px; cursor: pointer; transition: .2s; }
+.tab.on { background: #E8A33D; color: #2A1E0C; }
+.weeknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.nav { width: 42px; height: 42px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #F2EBE0; font-size: 24px; line-height: 1; cursor: pointer; transition: .15s; }
+.nav:active { transform: scale(0.92); background: rgba(232,163,61,0.18); }
+.wcenter { text-align: center; }
+.wbig { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 26px; letter-spacing: -1px; }
+.wsub { font-size: 12px; color: #A89B89; margin-top: 1px; text-transform: capitalize; }
+.grid { display: flex; flex-direction: column; gap: 9px; }
+.row { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 12px; display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: start; animation: rise .4s cubic-bezier(.2,.7,.3,1) backwards; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.row.ghost { opacity: 0.62; }
+.row.active { border-color: rgba(232,163,61,0.55); }
+.row.primed { background: linear-gradient(135deg, rgba(232,163,61,0.10), rgba(255,255,255,0.03)); border-color: rgba(232,163,61,0.4); }
+.daycol { text-align: center; padding-top: 4px; }
+.dname { font-size: 11px; color: #A89B89; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+.dnum { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 22px; line-height: 1; margin-top: 2px; }
+.row.active .dnum { color: #E8A33D; }
+.inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; grid-column: 2; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field span { font-size: 10px; color: #8C8070; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.field input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 15px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 9px; padding: 7px 6px; width: 100%; text-align: center; }
+.field input:focus { outline: none; border-color: #E8A33D; }
+.out { grid-column: 2; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,0.08); margin-top: 2px; padding-top: 9px; }
+.outline { display: flex; align-items: baseline; gap: 6px; }
+.olab { font-size: 10px; color: #8C8070; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px; }
+.oval { font-family: 'JetBrains Mono'; font-weight: 700; font-size: 15px; color: #D8CFBF; }
+.oval.big { font-size: 19px; color: #E8A33D; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+.badge.prime { color: #2A1E0C; background: #E8A33D; box-shadow: 0 0 14px rgba(232,163,61,0.4); }
+.badge.neutral { color: #9FD0C8; background: rgba(89,168,154,0.14); border: 1px solid rgba(89,168,154,0.3); }
+.badge.dim { color: #8C8070; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.primecard { margin-top: 16px; display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, rgba(232,163,61,0.22), rgba(232,163,61,0.06)); border: 1px solid rgba(232,163,61,0.45); border-radius: 18px; padding: 18px 20px; }
+.pc-num { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 52px; line-height: 0.9; color: #F5B85A; letter-spacing: -2px; }
+.pc-lab { font-size: 13px; font-weight: 700; color: #E8D9C2; line-height: 1.3; text-transform: uppercase; letter-spacing: 0.5px; }
+.totals { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 15px; padding: 14px 15px; }
+.stat.acc { background: linear-gradient(135deg, rgba(232,163,61,0.18), rgba(232,163,61,0.06)); border-color: rgba(232,163,61,0.4); grid-column: span 2; }
+.stat.sub { opacity: 0.85; }
+.slab { font-size: 11px; color: #A89B89; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.sval { font-family: 'JetBrains Mono'; font-weight: 700; font-size: 28px; margin-top: 4px; letter-spacing: -1px; }
+.stat.acc .sval { color: #F5B85A; }
+.stat.hl { border-color: rgba(224,108,79,0.35); background: rgba(224,108,79,0.07); }
+.stat.hl .sval { color: #F0A58E; }
+.stat.statbig .sval { font-size: 30px; }
+.mlabel { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 24px; text-transform: capitalize; margin-bottom: 14px; letter-spacing: -0.5px; }
+.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 12px; }
+.mgrid .stat.acc { grid-column: span 2; }
+.hint { font-size: 12px; color: #8C8070; margin-top: 14px; line-height: 1.5; }
+.foot { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10.5px; color: #6F6555; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, #15120E 40%); line-height: 1.4; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ---------- règles métier ----------
+var LUNCH_START = 11*60, LUNCH_END = 14*60+30, MIN_WORK = 6*60, PRIME_PAUSE_MAX = 30, PAUSE_CAP = 90, WEEK_THRESHOLD = 35*60;
+var DAYS_SHORT = ["lun","mar","mer","jeu","ven","sam","dim"];
+var MONTHS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+function pad(n){ return String(n).padStart(2,"0"); }
+function toMin(t){ if(!t||t.indexOf(":")<0) return null; var p=t.split(":").map(Number); if(isNaN(p[0])||isNaN(p[1])) return null; return p[0]*60+p[1]; }
+function fromMin(m){ if(m==null||isNaN(m)) return "—"; m=Math.max(0,Math.round(m)); return pad(Math.floor(m/60))+":"+pad(m%60); }
+function amplitudeMin(d){ var a=toMin(d.arrivee),dep=toMin(d.depart); if(a==null||dep==null) return null; var amp=dep-a; if(amp<0) amp+=1440; return amp; }
+function pauseRaw(d){ return toMin(d.pause)||0; }
+function pauseComptee(d){ return Math.min(pauseRaw(d),PAUSE_CAP); }
+function effectifMin(d){ var amp=amplitudeMin(d); if(amp==null) return null; return Math.max(0,amp-pauseComptee(d)); }
+function isFilled(d){ return toMin(d.arrivee)!=null && toMin(d.depart)!=null; }
+function isJourneeNormale(d){ var a=toMin(d.arrivee),dep=toMin(d.depart); if(a==null||dep==null) return false; return a<=LUNCH_START && dep>=LUNCH_END; }
+function dayType(d){ if(!isFilled(d)) return null; if(effectifMin(d)<MIN_WORK) return "courte"; return isJourneeNormale(d)?"normale":"20min"; }
+function hasPrime(d){ if(!isFilled(d)) return false; if(!isJourneeNormale(d)) return false; if(effectifMin(d)<MIN_WORK) return false; var p=pauseRaw(d); return p>0 && p<=PRIME_PAUSE_MAX; }
+function isCapped(d){ return pauseRaw(d)>PAUSE_CAP; }
+
+// ---------- dates ISO ----------
+function startOfWeek(date){ var d=new Date(date); var day=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-day); return d; }
+function isoWeek(date){ var d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); var dn=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dn+3); var ft=new Date(Date.UTC(d.getUTCFullYear(),0,4)); var fn=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-fn+3); var week=1+Math.round((d-ft)/(7*864e5)); return {week:week,year:d.getUTCFullYear()}; }
+function weekKey(date){ var w=isoWeek(date); return "wk:"+w.year+"-W"+pad(w.week); }
+function dateISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function weekDates(date){ var s=startOfWeek(date); var r=[]; for(var i=0;i<7;i++){ var d=new Date(s); d.setDate(s.getDate()+i); r.push(d);} return r; }
+function emptyWeek(){ var r=[]; for(var i=0;i<7;i++) r.push({arrivee:"",depart:"",pause:""}); return r; }
+
+var SEED_KEY = "wk:2026-W22";
+var SEED = [
+  {arrivee:"12:05",depart:"20:30",pause:"00:20"},
+  {arrivee:"07:40",depart:"20:00",pause:"01:00"},
+  {arrivee:"09:25",depart:"19:20",pause:"00:30"},
+  {arrivee:"07:35",depart:"18:30",pause:"00:00"},
+  {arrivee:"",depart:"",pause:""},
+  {arrivee:"",depart:"",pause:""},
+  {arrivee:"",depart:"",pause:""}
+];
+
+function loadWeek(key){
+  try { var v=localStorage.getItem(key); if(v){ var d=JSON.parse(v); if(d&&d.length===7) return d; } } catch(e){}
+  if(key===SEED_KEY) return SEED.map(function(x){return {arrivee:x.arrivee,depart:x.depart,pause:x.pause};});
+  return emptyWeek();
+}
+function saveWeek(key,w){ try{ localStorage.setItem(key,JSON.stringify(w)); }catch(e){} }
+
+// ---------- état ----------
+var view = "week";
+var refDate = new Date(2026,4,25);
+
+function weekTotals(week){
+  var amp=0,eff=0,pau=0,prime=0,jours=0;
+  week.forEach(function(d){
+    var a=amplitudeMin(d), e=effectifMin(d);
+    if(a!=null){ amp+=a; jours++; }
+    if(e!=null) eff+=e;
+    pau+=pauseComptee(d);
+    if(hasPrime(d)) prime++;
+  });
+  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,sup:Math.max(0,eff-WEEK_THRESHOLD)};
+}
+
+function monthAgg(){
+  var y=refDate.getFullYear(), mo=refDate.getMonth();
+  var first=new Date(y,mo,1), last=new Date(y,mo+1,0);
+  var keys={};
+  for(var d=startOfWeek(first); d<=last; d.setDate(d.getDate()+7)) keys[weekKey(new Date(d))]=1;
+  var amp=0,eff=0,pau=0,prime=0,jours=0,sup=0;
+  Object.keys(keys).forEach(function(k){
+    var data=loadWeek(k);
+    var wkYear=parseInt(k.slice(3,7)), wkW=parseInt(k.slice(9));
+    var jan4=new Date(wkYear,0,4); var mon=startOfWeek(jan4); mon.setDate(mon.getDate()+(wkW-1)*7);
+    var weekEff=0;
+    data.forEach(function(day,i){
+      var e=effectifMin(day);
+      if(e!=null) weekEff+=e;
+      var dd=new Date(mon); dd.setDate(mon.getDate()+i);
+      if(dd.getMonth()!==mo||dd.getFullYear()!==y) return;
+      var a=amplitudeMin(day);
+      if(a!=null){ amp+=a; jours++; }
+      if(e!=null) eff+=e;
+      pau+=pauseComptee(day);
+      if(hasPrime(day)) prime++;
+    });
+    if(mon.getMonth()===mo && mon.getFullYear()===y) sup+=Math.max(0,weekEff-WEEK_THRESHOLD);
+  });
+  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,sup:sup,label:MONTHS[mo]+" "+y};
+}
+
+function esc(s){ return String(s).replace(/"/g,"&quot;"); }
+function statHTML(label,value,cls){ return '<div class="stat'+(cls?" "+cls:"")+'"><div class="slab">'+label+'</div><div class="sval">'+value+'</div></div>'; }
+
+function render(){
+  var dates=weekDates(refDate), w=isoWeek(refDate), key=weekKey(refDate);
+  var today=dateISO(new Date());
+  var html='';
+  html+='<div class="top"><div class="brand"><span class="dot"></span><span>Pointage</span></div>';
+  html+='<div class="tabs"><button class="tab'+(view==="week"?" on":"")+'" data-view="week">Semaine</button><button class="tab'+(view==="month"?" on":"")+'" data-view="month">Mois</button></div></div>';
+  html+='<div class="weeknav"><button class="nav" data-nav="-1">&lsaquo;</button><div class="wcenter"><div class="wbig">S'+pad(w.week)+'</div><div class="wsub">'+dates[0].getDate()+' '+MONTHS[dates[0].getMonth()].slice(0,4)+'. — '+dates[6].getDate()+' '+MONTHS[dates[6].getMonth()].slice(0,4)+'. '+w.year+'</div></div><button class="nav" data-nav="1">&rsaquo;</button></div>';
+
+  if(view==="week"){
+    var week=loadWeek(key);
+    html+='<div class="grid">';
+    week.forEach(function(d,i){
+      var amp=amplitudeMin(d), eff=effectifMin(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
+      var active=dateISO(dates[i])===today, filled=d.arrivee||d.depart;
+      html+='<div class="row'+(active?" active":"")+(prime?" primed":"")+(filled?"":" ghost")+'" style="animation-delay:'+(i*40)+'ms">';
+      html+='<div class="daycol"><div class="dname">'+DAYS_SHORT[i]+'</div><div class="dnum">'+dates[i].getDate()+'</div></div>';
+      html+='<div class="inputs">';
+      html+='<label class="field"><span>Arrivée</span><input type="time" data-idx="'+i+'" data-field="arrivee" value="'+esc(d.arrivee)+'"></label>';
+      html+='<label class="field"><span>Départ</span><input type="time" data-idx="'+i+'" data-field="depart" value="'+esc(d.depart)+'"></label>';
+      html+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pause" value="'+esc(d.pause)+'"></label>';
+      html+='</div>';
+      html+='<div class="out"><div class="outline"><span class="olab">Effectif</span><span class="oval big">'+fromMin(eff)+'</span></div>';
+      html+='<div class="outline"><span class="olab">Amplitude</span><span class="oval">'+fromMin(amp)+'</span></div>';
+      html+='<div class="tags">';
+      if(prime) html+='<span class="badge prime">★ Prime ext.</span>';
+      if(!prime && type==="20min") html+='<span class="badge neutral">pause 20 min</span>';
+      if(!prime && type==="courte") html+='<span class="badge dim">&lt; 6h</span>';
+      if(capped) html+='<span class="badge dim">pause plaf. 1h30</span>';
+      html+='</div></div></div>';
+    });
+    html+='</div>';
+    var t=weekTotals(week);
+    html+='<div class="primecard"><div class="pc-num">'+t.prime+'</div><div class="pc-lab">prime'+(t.prime>1?"s":"")+' pause extérieure<br>cette semaine</div></div>';
+    html+='<div class="totals">';
+    html+=statHTML("Travaillé (effectif)",fromMin(t.eff),"acc");
+    html+=statHTML("Heures sup (&gt; 35h)",fromMin(t.sup),"hl");
+    html+=statHTML("Amplitude",fromMin(t.amp),"");
+    html+=statHTML("Pauses comptées",fromMin(t.pau),"");
+    html+=statHTML("Jours travaillés",String(t.jours),"sub");
+    html+='</div>';
+  } else {
+    var m=monthAgg();
+    html+='<div class="mlabel">'+m.label+'</div>';
+    html+='<div class="primecard"><div class="pc-num">'+m.prime+'</div><div class="pc-lab">prime'+(m.prime>1?"s":"")+' pause extérieure<br>ce mois-ci</div></div>';
+    html+='<div class="mgrid">';
+    html+=statHTML("Travaillé (effectif)",fromMin(m.eff),"acc statbig");
+    html+=statHTML("Heures sup (&gt; 35h/sem.)",fromMin(m.sup),"hl statbig");
+    html+=statHTML("Amplitude totale",fromMin(m.amp),"");
+    html+=statHTML("Pauses comptées",fromMin(m.pau),"");
+    html+=statHTML("Jours travaillés",String(m.jours),"");
+    html+='</div>';
+    html+='<p class="hint">Heures sup comptées semaine par semaine (dépassement des 35h), chaque semaine rattachée au mois de son lundi. Navigue avec ‹ › pour changer de mois.</p>';
+  }
+  html+='<div class="foot">Prime = journée normale (arrivée ≤ 11h, départ ≥ 14h30), +6h travaillées, pause ≤ 30 min · données enregistrées sur ce téléphone</div>';
+
+  var app=document.getElementById("app");
+  app.innerHTML=html;
+
+  app.querySelectorAll(".tab").forEach(function(b){ b.addEventListener("click",function(){ view=b.dataset.view; render(); }); });
+  app.querySelectorAll(".nav").forEach(function(b){ b.addEventListener("click",function(){ var dd=new Date(refDate); dd.setDate(dd.getDate()+parseInt(b.dataset.nav)*7); refDate=dd; render(); }); });
+  app.querySelectorAll("input[data-field]").forEach(function(inp){
+    inp.addEventListener("change",function(){
+      var key=weekKey(refDate); var wk=loadWeek(key);
+      wk[parseInt(inp.dataset.idx)][inp.dataset.field]=inp.value;
+      saveWeek(key,wk); render();
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>
