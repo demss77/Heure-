@@ -163,6 +163,32 @@ function monthAgg(){
 function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 function statHTML(label,value,cls){ return '<div class="stat'+(cls?" "+cls:"")+'"><div class="slab">'+label+'</div><div class="sval">'+value+'</div></div>'; }
 
+function outHTML(d){
+  var amp=amplitudeMin(d), eff=effectifMin(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
+  var h='<div class="outline"><span class="olab">Effectif</span><span class="oval big">'+fromMin(eff)+'</span></div>';
+  h+='<div class="outline"><span class="olab">Amplitude</span><span class="oval">'+fromMin(amp)+'</span></div>';
+  h+='<div class="tags">';
+  if(prime) h+='<span class="badge prime">★ Prime ext.</span>';
+  if(!prime && type==="20min") h+='<span class="badge neutral">pause 20 min</span>';
+  if(!prime && type==="courte") h+='<span class="badge dim">&lt; 6h</span>';
+  if(capped) h+='<span class="badge dim">pause plaf. 1h30</span>';
+  h+='</div>';
+  return h;
+}
+function rowClass(d,active,filled){ return "row"+(active?" active":"")+(hasPrime(d)?" primed":"")+(filled?"":" ghost"); }
+function summaryHTML(week){
+  var t=weekTotals(week);
+  var h='<div class="primecard"><div class="pc-num">'+t.prime+'</div><div class="pc-lab">prime'+(t.prime>1?"s":"")+' pause extérieure<br>cette semaine</div></div>';
+  h+='<div class="totals">';
+  h+=statHTML("Travaillé (effectif)",fromMin(t.eff),"acc");
+  h+=statHTML("Heures sup (&gt; 35h)",fromMin(t.sup),"hl");
+  h+=statHTML("Amplitude",fromMin(t.amp),"");
+  h+=statHTML("Pauses comptées",fromMin(t.pau),"");
+  h+=statHTML("Jours travaillés",String(t.jours),"sub");
+  h+='</div>';
+  return h;
+}
+
 function render(){
   var dates=weekDates(refDate), w=isoWeek(refDate), key=weekKey(refDate);
   var today=dateISO(new Date());
@@ -175,34 +201,18 @@ function render(){
     var week=loadWeek(key);
     html+='<div class="grid">';
     week.forEach(function(d,i){
-      var amp=amplitudeMin(d), eff=effectifMin(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
       var active=dateISO(dates[i])===today, filled=d.arrivee||d.depart;
-      html+='<div class="row'+(active?" active":"")+(prime?" primed":"")+(filled?"":" ghost")+'" style="animation-delay:'+(i*40)+'ms">';
+      html+='<div class="'+rowClass(d,active,filled)+'" data-row-i="'+i+'" style="animation-delay:'+(i*40)+'ms">';
       html+='<div class="daycol"><div class="dname">'+DAYS_SHORT[i]+'</div><div class="dnum">'+dates[i].getDate()+'</div></div>';
       html+='<div class="inputs">';
       html+='<label class="field"><span>Arrivée</span><input type="time" data-idx="'+i+'" data-field="arrivee" value="'+esc(d.arrivee)+'"></label>';
       html+='<label class="field"><span>Départ</span><input type="time" data-idx="'+i+'" data-field="depart" value="'+esc(d.depart)+'"></label>';
       html+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pause" value="'+esc(d.pause)+'"></label>';
       html+='</div>';
-      html+='<div class="out"><div class="outline"><span class="olab">Effectif</span><span class="oval big">'+fromMin(eff)+'</span></div>';
-      html+='<div class="outline"><span class="olab">Amplitude</span><span class="oval">'+fromMin(amp)+'</span></div>';
-      html+='<div class="tags">';
-      if(prime) html+='<span class="badge prime">★ Prime ext.</span>';
-      if(!prime && type==="20min") html+='<span class="badge neutral">pause 20 min</span>';
-      if(!prime && type==="courte") html+='<span class="badge dim">&lt; 6h</span>';
-      if(capped) html+='<span class="badge dim">pause plaf. 1h30</span>';
-      html+='</div></div></div>';
+      html+='<div class="out">'+outHTML(d)+'</div></div>';
     });
     html+='</div>';
-    var t=weekTotals(week);
-    html+='<div class="primecard"><div class="pc-num">'+t.prime+'</div><div class="pc-lab">prime'+(t.prime>1?"s":"")+' pause extérieure<br>cette semaine</div></div>';
-    html+='<div class="totals">';
-    html+=statHTML("Travaillé (effectif)",fromMin(t.eff),"acc");
-    html+=statHTML("Heures sup (&gt; 35h)",fromMin(t.sup),"hl");
-    html+=statHTML("Amplitude",fromMin(t.amp),"");
-    html+=statHTML("Pauses comptées",fromMin(t.pau),"");
-    html+=statHTML("Jours travaillés",String(t.jours),"sub");
-    html+='</div>';
+    html+='<div id="summary">'+summaryHTML(week)+'</div>';
   } else {
     var m=monthAgg();
     html+='<div class="mlabel">'+m.label+'</div>';
@@ -226,8 +236,19 @@ function render(){
   app.querySelectorAll("input[data-field]").forEach(function(inp){
     inp.addEventListener("change",function(){
       var key=weekKey(refDate); var wk=loadWeek(key);
-      wk[parseInt(inp.dataset.idx)][inp.dataset.field]=inp.value;
-      saveWeek(key,wk); render();
+      var i=parseInt(inp.dataset.idx);
+      wk[i][inp.dataset.field]=inp.value;
+      saveWeek(key,wk);
+      var dates=weekDates(refDate), today=dateISO(new Date());
+      var row=document.querySelector('[data-row-i="'+i+'"]');
+      if(row){
+        var d=wk[i], active=dateISO(dates[i])===today, filled=d.arrivee||d.depart;
+        row.className=rowClass(d,active,filled);
+        var outEl=row.querySelector(".out");
+        if(outEl) outEl.innerHTML=outHTML(d);
+      }
+      var sum=document.getElementById("summary");
+      if(sum) sum.innerHTML=summaryHTML(wk);
     });
   });
 }
