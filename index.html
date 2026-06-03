@@ -126,7 +126,7 @@ function loadWeek(key){
 function saveWeek(key,w){ try{ localStorage.setItem(key,JSON.stringify(w)); }catch(e){} }
 
 var view = "week";
-var refDate = new Date(2026,4,25);
+var refDate = new Date();
 
 function weekTotals(week){
   var amp=0,eff=0,pau=0,prime=0,jours=0,cp=0;
