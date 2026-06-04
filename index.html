@@ -77,10 +77,13 @@ body { font-family: 'Manrope', sans-serif; background: radial-gradient(120% 80% 
 .mgrid .stat.acc { grid-column: span 2; }
 .hint { font-size: 12px; color: #8C8070; margin-top: 14px; line-height: 1.5; }
 .foot { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10.5px; color: #6F6555; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, #15120E 40%); line-height: 1.4; }
+.toast { position: fixed; left: 50%; bottom: calc(70px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(8px); background: rgba(89,168,154,0.95); color: #fff; padding: 8px 18px; border-radius: 24px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 100; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="savetoast" class="toast">✓ enregistré</div>
 <script>
 var LUNCH_START = 11*60, LUNCH_END = 14*60+30, MIN_WORK = 6*60, PRIME_PAUSE_MAX = 30, PAUSE_CAP = 90, WEEK_THRESHOLD = 35*60;
 var DAYS_SHORT = ["lun","mar","mer","jeu","ven","sam","dim"];
@@ -123,7 +126,15 @@ function loadWeek(key){
   if(key===SEED_KEY) return SEED.map(function(x){return {arrivee:x.arrivee,depart:x.depart,pause:x.pause,conge:!!x.conge};});
   return emptyWeek();
 }
-function saveWeek(key,w){ try{ localStorage.setItem(key,JSON.stringify(w)); }catch(e){} }
+var toastTimer=null;
+function showSaved(){
+  var el=document.getElementById("savetoast");
+  if(!el) return;
+  el.classList.add("show");
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){ el.classList.remove("show"); },1400);
+}
+function saveWeek(key,w){ try{ localStorage.setItem(key,JSON.stringify(w)); showSaved(); }catch(e){} }
 
 var view = "week";
 var refDate = new Date();
@@ -193,7 +204,7 @@ function rowBodyHTML(d,i){
   var h='<div class="inputs">';
   h+='<label class="field"><span>Arrivée</span><input type="time" data-idx="'+i+'" data-field="arrivee" value="'+esc(d.arrivee)+'"></label>';
   h+='<label class="field"><span>Départ</span><input type="time" data-idx="'+i+'" data-field="depart" value="'+esc(d.depart)+'"></label>';
-  h+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pause" value="'+esc(d.pause)+'"></label>';
+  h+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pause" value="'+esc(d.pause||"00:00")+'"></label>';
   h+='</div>';
   h+='<div class="out">'+outHTML(d,i)+'</div>';
   return h;
@@ -305,7 +316,29 @@ function initDelegation(){
       if(sum) sum.innerHTML=summaryHTML(wk);
     }
   });
+  app.addEventListener("input",function(e){
+    var t=e.target;
+    if(t.matches("input[data-field]")){
+      var i=parseInt(t.dataset.idx);
+      var key=weekKey(refDate); var wk=loadWeek(key);
+      if(wk[i][t.dataset.field]===t.value) return;
+      wk[i][t.dataset.field]=t.value;
+      saveWeek(key,wk);
+    }
+  });
 }
+
+function flushInputs(){
+  var key=weekKey(refDate); var wk=loadWeek(key); var changed=false;
+  document.querySelectorAll("input[data-field]").forEach(function(inp){
+    var i=parseInt(inp.dataset.idx), f=inp.dataset.field;
+    if(wk[i] && wk[i][f]!==inp.value){ wk[i][f]=inp.value; changed=true; }
+  });
+  if(changed) saveWeek(key,wk);
+}
+window.addEventListener("pagehide",flushInputs);
+window.addEventListener("blur",flushInputs);
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden") flushInputs(); });
 
 initDelegation();
 render();
