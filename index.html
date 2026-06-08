@@ -42,6 +42,10 @@ body { font-family: 'Manrope', sans-serif; background: radial-gradient(120% 80% 
 .field span { font-size: 10px; color: #8C8070; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 .field input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 15px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 9px; padding: 7px 6px; width: 100%; text-align: center; }
 .field input:focus { outline: none; border-color: #E8A33D; }
+.kmwrap { display: flex; align-items: center; gap: 6px; }
+.km-input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 7px; padding: 3px 6px; width: 64px; text-align: center; -moz-appearance: textfield; }
+.km-input::-webkit-outer-spin-button, .km-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.km-input:focus { outline: none; border-color: #E8A33D; }
 .out { grid-column: 2; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,0.08); margin-top: 2px; padding-top: 9px; }
 .outline { display: flex; align-items: baseline; gap: 6px; }
 .olab { font-size: 10px; color: #8C8070; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px; }
@@ -102,6 +106,7 @@ function isJourneeNormale(d){ var a=toMin(d.arrivee),dep=toMin(d.depart); if(a==
 function dayType(d){ if(!isFilled(d)) return null; if(effectifMin(d)<MIN_WORK) return "courte"; return isJourneeNormale(d)?"normale":"20min"; }
 function hasPrime(d){ if(!isFilled(d)) return false; if(!isJourneeNormale(d)) return false; if(effectifMin(d)<MIN_WORK) return false; var p=pauseRaw(d); return p>0 && p<=PRIME_PAUSE_MAX; }
 function isCapped(d){ return pauseRaw(d)>PAUSE_CAP; }
+function kmNum(d){ var n=parseInt((d&&d.km)||"0",10); return isNaN(n)?0:n; }
 
 function startOfWeek(date){ var d=new Date(date); var day=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-day); return d; }
 function isoWeek(date){ var d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); var dn=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dn+3); var ft=new Date(Date.UTC(d.getUTCFullYear(),0,4)); var fn=(ft.getUTCDay()+6)%7; ft.setUTCDate(ft.getUTCDate()-fn+3); var week=1+Math.round((d-ft)/(7*864e5)); return {week:week,year:d.getUTCFullYear()}; }
@@ -140,8 +145,9 @@ var view = "week";
 var refDate = new Date();
 
 function weekTotals(week){
-  var amp=0,eff=0,pau=0,prime=0,jours=0,cp=0;
+  var amp=0,eff=0,pau=0,prime=0,jours=0,cp=0,km=0;
   week.forEach(function(d,i){
+    km+=kmNum(d);
     if(isConge(d)){ if(i!==6) cp++; return; }
     var a=amplitudeMin(d), e=effectifMin(d);
     if(a!=null){ amp+=a; jours++; }
@@ -149,7 +155,7 @@ function weekTotals(week){
     pau+=pauseComptee(d);
     if(hasPrime(d)) prime++;
   });
-  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,cp:cp,sup:Math.max(0,eff-WEEK_THRESHOLD)};
+  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,cp:cp,km:km,sup:Math.max(0,eff-WEEK_THRESHOLD)};
 }
 
 function monthAgg(){
@@ -157,7 +163,7 @@ function monthAgg(){
   var first=new Date(y,mo,1), last=new Date(y,mo+1,0);
   var keys={};
   for(var d=startOfWeek(first); d<=last; d.setDate(d.getDate()+7)) keys[weekKey(new Date(d))]=1;
-  var amp=0,eff=0,pau=0,prime=0,jours=0,sup=0,cp=0;
+  var amp=0,eff=0,pau=0,prime=0,jours=0,sup=0,cp=0,km=0;
   Object.keys(keys).forEach(function(k){
     var data=loadWeek(k);
     var wkYear=parseInt(k.slice(3,7)), wkW=parseInt(k.slice(9));
@@ -168,6 +174,7 @@ function monthAgg(){
       if(e!=null) weekEff+=e;
       var dd=new Date(mon); dd.setDate(mon.getDate()+i);
       if(dd.getMonth()!==mo||dd.getFullYear()!==y) return;
+      km+=kmNum(day);
       if(isConge(day)){ if(dd.getDay()!==0) cp++; return; }
       var a=amplitudeMin(day);
       if(a!=null){ amp+=a; jours++; }
@@ -177,7 +184,7 @@ function monthAgg(){
     });
     if(mon.getMonth()===mo && mon.getFullYear()===y) sup+=Math.max(0,weekEff-WEEK_THRESHOLD);
   });
-  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,sup:sup,cp:cp,label:MONTHS[mo]+" "+y};
+  return {amp:amp,eff:eff,pau:pau,prime:prime,jours:jours,sup:sup,cp:cp,km:km,label:MONTHS[mo]+" "+y};
 }
 
 function esc(s){ return String(s).replace(/"/g,"&quot;"); }
@@ -187,6 +194,7 @@ function outHTML(d,i){
   var amp=amplitudeMin(d), eff=effectifMin(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
   var h='<div class="outline"><span class="olab">Effectif</span><span class="oval big">'+fromMin(eff)+'</span></div>';
   h+='<div class="outline"><span class="olab">Amplitude</span><span class="oval">'+fromMin(amp)+'</span></div>';
+  h+='<div class="kmwrap"><span class="olab">Km</span><input type="number" class="km-input" inputmode="numeric" pattern="[0-9]*" data-idx="'+i+'" data-field="km" value="'+esc(d.km||"")+'" placeholder="—"></div>';
   h+='<div class="tags">';
   if(prime) h+='<span class="badge prime">★ Prime ext.</span>';
   if(!prime && type==="20min") h+='<span class="badge neutral">pause 20 min</span>';
@@ -227,6 +235,7 @@ function summaryHTML(week){
   h+=statHTML("Heures sup (&gt; 35h)",fromMin(t.sup),"hl");
   h+=statHTML("Amplitude",fromMin(t.amp),"");
   h+=statHTML("Pauses comptées",fromMin(t.pau),"");
+  h+=statHTML("Kilomètres",t.km+" km","");
   h+=statHTML("Congés payés",t.cp+" j","cp");
   h+=statHTML("Jours travaillés",String(t.jours),"sub");
   h+='</div>';
@@ -261,6 +270,7 @@ function render(){
     html+=statHTML("Travaillé (effectif)",fromMin(m.eff),"acc statbig");
     html+=statHTML("Heures sup (&gt; 35h/sem.)",fromMin(m.sup),"hl statbig");
     html+=statHTML("Congés payés",m.cp+" j","cp statbig");
+    html+=statHTML("Kilomètres",m.km+" km","statbig");
     html+=statHTML("Amplitude totale",fromMin(m.amp),"");
     html+=statHTML("Pauses comptées",fromMin(m.pau),"");
     html+=statHTML("Jours travaillés",String(m.jours),"");
@@ -297,7 +307,7 @@ function initDelegation(){
       var i=parseInt(t.dataset.cpIdx);
       var key=weekKey(refDate); var wk=loadWeek(key);
       wk[i].conge=!wk[i].conge;
-      if(wk[i].conge){ wk[i].arrivee=""; wk[i].depart=""; wk[i].pause=""; }
+      if(wk[i].conge){ wk[i].arrivee=""; wk[i].depart=""; wk[i].pause=""; wk[i].km=""; }
       saveWeek(key,wk);
       partialUpdateRow(i,wk,true);
       var sum=document.getElementById("summary");
@@ -323,7 +333,11 @@ function initDelegation(){
       var key=weekKey(refDate); var wk=loadWeek(key);
       if(wk[i][t.dataset.field]===t.value) return;
       wk[i][t.dataset.field]=t.value;
-      saveWeek(key,wk);
+      try { localStorage.setItem(key,JSON.stringify(wk)); } catch(_){}
+      if(t.dataset.field==="km"){
+        var sum=document.getElementById("summary");
+        if(sum) sum.innerHTML=summaryHTML(wk);
+      }
     }
   });
 }
