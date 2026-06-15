@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Pointage">
 <meta name="theme-color" content="#15120E">
 <title>Pointage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@500;600;700&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -19,6 +20,10 @@ body { font-family: 'Manrope', sans-serif; background: radial-gradient(120% 80% 
 .tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 12px; }
 .tab { font-family: 'Manrope'; font-weight: 700; font-size: 13px; color: #A89B89; background: none; border: none; padding: 7px 14px; border-radius: 9px; cursor: pointer; transition: .2s; }
 .tab.on { background: #E8A33D; color: #2A1E0C; }
+.actions { display: flex; align-items: center; gap: 8px; }
+.iconbtn { width: 36px; height: 32px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #F2EBE0; font-size: 15px; line-height: 1; cursor: pointer; padding: 0; transition: .15s; }
+.iconbtn:active { transform: scale(0.9); background: rgba(232,163,61,0.18); }
+.iconbtn.busy { opacity: 0.5; pointer-events: none; }
 .weeknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .nav { width: 42px; height: 42px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #F2EBE0; font-size: 24px; line-height: 1; cursor: pointer; transition: .15s; }
 .nav:active { transform: scale(0.92); background: rgba(232,163,61,0.18); }
@@ -37,10 +42,10 @@ body { font-family: 'Manrope', sans-serif; background: radial-gradient(120% 80% 
 .dnum { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 22px; line-height: 1; margin-top: 2px; }
 .row.active .dnum { color: #E8A33D; }
 .row.conge .dnum { color: #BEDDED; }
-.inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; grid-column: 2; }
-.field { display: flex; flex-direction: column; gap: 3px; }
+.inputs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; grid-column: 2; }
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .field span { font-size: 10px; color: #8C8070; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
-.field input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 15px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 9px; padding: 7px 6px; width: 100%; text-align: center; }
+.field input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 13px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 9px; padding: 7px 2px; width: 100%; text-align: center; }
 .field input:focus { outline: none; border-color: #E8A33D; }
 .kmwrap { display: flex; align-items: center; gap: 6px; }
 .km-input { font-family: 'JetBrains Mono'; font-weight: 500; font-size: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); color: #F2EBE0; border-radius: 7px; padding: 3px 6px; width: 64px; text-align: center; -moz-appearance: textfield; }
@@ -98,7 +103,11 @@ function toMin(t){ if(!t||t.indexOf(":")<0) return null; var p=t.split(":").map(
 function fromMin(m){ if(m==null||isNaN(m)) return "—"; m=Math.max(0,Math.round(m)); return pad(Math.floor(m/60))+":"+pad(m%60); }
 function isConge(d){ return !!(d && d.conge); }
 function amplitudeMin(d){ var a=toMin(d.arrivee),dep=toMin(d.depart); if(a==null||dep==null) return null; var amp=dep-a; if(amp<0) amp+=1440; return amp; }
-function pauseRaw(d){ return toMin(d.pause)||0; }
+function pauseRaw(d){
+  var s=toMin(d&&d.pauseStart), e=toMin(d&&d.pauseEnd);
+  if(s!=null && e!=null){ var diff=e-s; return diff>0?diff:0; }
+  return toMin(d&&d.pause)||0;
+}
 function pauseComptee(d){ return Math.min(pauseRaw(d),PAUSE_CAP); }
 function effectifMin(d){ var amp=amplitudeMin(d); if(amp==null) return null; return Math.max(0,amp-pauseComptee(d)); }
 function isFilled(d){ return toMin(d.arrivee)!=null && toMin(d.depart)!=null; }
@@ -132,13 +141,15 @@ function loadWeek(key){
   return emptyWeek();
 }
 var toastTimer=null;
-function showSaved(){
+function showToast(msg){
   var el=document.getElementById("savetoast");
   if(!el) return;
+  el.textContent=msg||"✓ enregistré";
   el.classList.add("show");
   if(toastTimer) clearTimeout(toastTimer);
-  toastTimer=setTimeout(function(){ el.classList.remove("show"); },1400);
+  toastTimer=setTimeout(function(){ el.classList.remove("show"); },1800);
 }
+function showSaved(){ showToast("✓ enregistré"); }
 function saveWeek(key,w){ try{ localStorage.setItem(key,JSON.stringify(w)); showSaved(); }catch(e){} }
 
 var view = "week";
@@ -191,9 +202,10 @@ function esc(s){ return String(s).replace(/"/g,"&quot;"); }
 function statHTML(label,value,cls){ return '<div class="stat'+(cls?" "+cls:"")+'"><div class="slab">'+label+'</div><div class="sval">'+value+'</div></div>'; }
 
 function outHTML(d,i){
-  var amp=amplitudeMin(d), eff=effectifMin(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
+  var amp=amplitudeMin(d), eff=effectifMin(d), pdur=pauseRaw(d), prime=hasPrime(d), type=dayType(d), capped=isCapped(d);
   var h='<div class="outline"><span class="olab">Effectif</span><span class="oval big">'+fromMin(eff)+'</span></div>';
   h+='<div class="outline"><span class="olab">Amplitude</span><span class="oval">'+fromMin(amp)+'</span></div>';
+  h+='<div class="outline"><span class="olab">Pause</span><span class="oval">'+(pdur>0?fromMin(pdur):"—")+'</span></div>';
   h+='<div class="kmwrap"><span class="olab">Km</span><input type="number" class="km-input" inputmode="numeric" pattern="[0-9]*" data-idx="'+i+'" data-field="km" value="'+esc(d.km||"")+'" placeholder="—"></div>';
   h+='<div class="tags">';
   if(prime) h+='<span class="badge prime">★ Prime ext.</span>';
@@ -212,7 +224,8 @@ function rowBodyHTML(d,i){
   var h='<div class="inputs">';
   h+='<label class="field"><span>Arrivée</span><input type="time" data-idx="'+i+'" data-field="arrivee" value="'+esc(d.arrivee)+'"></label>';
   h+='<label class="field"><span>Départ</span><input type="time" data-idx="'+i+'" data-field="depart" value="'+esc(d.depart)+'"></label>';
-  h+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pause" value="'+esc(d.pause||"00:00")+'"></label>';
+  h+='<label class="field"><span>Pause</span><input type="time" data-idx="'+i+'" data-field="pauseStart" value="'+esc(d.pauseStart||"")+'"></label>';
+  h+='<label class="field"><span>Reprise</span><input type="time" data-idx="'+i+'" data-field="pauseEnd" value="'+esc(d.pauseEnd||"")+'"></label>';
   h+='</div>';
   h+='<div class="out">'+outHTML(d,i)+'</div>';
   return h;
@@ -247,7 +260,8 @@ function render(){
   var today=dateISO(new Date());
   var html='';
   html+='<div class="top"><div class="brand"><span class="dot"></span><span>Pointage</span></div>';
-  html+='<div class="tabs"><button class="tab'+(view==="week"?" on":"")+'" data-view="week">Semaine</button><button class="tab'+(view==="month"?" on":"")+'" data-view="month">Mois</button></div></div>';
+  html+='<div class="actions"><button class="iconbtn snapbtn" data-action="snap" aria-label="Capturer">📷</button><button class="iconbtn exportbtn" data-action="export" aria-label="Exporter">📤</button>';
+  html+='<div class="tabs"><button class="tab'+(view==="week"?" on":"")+'" data-view="week">Semaine</button><button class="tab'+(view==="month"?" on":"")+'" data-view="month">Mois</button></div></div></div>';
   html+='<div class="weeknav"><button class="nav" data-nav="-1">&lsaquo;</button><div class="wcenter"><div class="wbig">S'+pad(w.week)+'</div><div class="wsub">'+dates[0].getDate()+' '+MONTHS[dates[0].getMonth()].slice(0,4)+'. — '+dates[6].getDate()+' '+MONTHS[dates[6].getMonth()].slice(0,4)+'. '+w.year+'</div></div><button class="nav" data-nav="1">&rsaquo;</button></div>';
 
   if(view==="week"){
@@ -307,12 +321,14 @@ function initDelegation(){
       var i=parseInt(t.dataset.cpIdx);
       var key=weekKey(refDate); var wk=loadWeek(key);
       wk[i].conge=!wk[i].conge;
-      if(wk[i].conge){ wk[i].arrivee=""; wk[i].depart=""; wk[i].pause=""; wk[i].km=""; }
+      if(wk[i].conge){ wk[i].arrivee=""; wk[i].depart=""; wk[i].pause=""; wk[i].pauseStart=""; wk[i].pauseEnd=""; wk[i].km=""; }
       saveWeek(key,wk);
       partialUpdateRow(i,wk,true);
       var sum=document.getElementById("summary");
       if(sum) sum.innerHTML=summaryHTML(wk);
     }
+    if(t.matches(".snapbtn")){ takeScreenshot(t); }
+    if(t.matches(".exportbtn")){ exportData(); }
   });
   app.addEventListener("change",function(e){
     var t=e.target;
@@ -350,6 +366,135 @@ function flushInputs(){
   });
   if(changed) saveWeek(key,wk);
 }
+function collectData(){
+  var weeks={}, keys=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k && k.indexOf("wk:")===0) keys.push(k);
+  }
+  keys.sort();
+  keys.forEach(function(k){
+    var data=loadWeek(k);
+    var wkYear=parseInt(k.slice(3,7)), wkW=parseInt(k.slice(9));
+    var jan4=new Date(wkYear,0,4);
+    var mon=startOfWeek(jan4); mon.setDate(mon.getDate()+(wkW-1)*7);
+    var totaux=weekTotals(data);
+    var jours=data.map(function(d,i){
+      var dd=new Date(mon); dd.setDate(mon.getDate()+i);
+      return {
+        jour: DAYS_SHORT[i],
+        date: dateISO(dd),
+        arrivee: d.arrivee||"",
+        depart: d.depart||"",
+        pause_debut: d.pauseStart||"",
+        pause_fin: d.pauseEnd||"",
+        pause_duree_min: pauseRaw(d),
+        km: d.km||"",
+        conge: !!d.conge,
+        amplitude_min: amplitudeMin(d),
+        effectif_min: effectifMin(d),
+        type_journee: dayType(d),
+        prime_pause_ext: hasPrime(d)
+      };
+    });
+    weeks[k]={
+      semaine: "S"+pad(wkW),
+      annee: wkYear,
+      lundi: dateISO(mon),
+      jours: jours,
+      totaux_min: {
+        effectif: totaux.eff,
+        amplitude: totaux.amp,
+        heures_sup: totaux.sup,
+        pauses_comptees: totaux.pau
+      },
+      compteurs: {
+        primes_pause_ext: totaux.prime,
+        cp_jours_ouvrables: totaux.cp,
+        km_total: totaux.km,
+        jours_travailles: totaux.jours
+      }
+    };
+  });
+  return {
+    exported_at: new Date().toISOString(),
+    version: 1,
+    regles: {
+      creneau_repas: "11:00-14:30 (journée normale = arrivée <= 11h ET départ >= 14:30)",
+      seuil_travail_pour_decote_pause: "6h effectif",
+      prime_pause_ext: "journée normale + >=6h effectif + pause >0 et <=30 min",
+      pause_max_comptee: "1h30 (au-dela non compte)",
+      heures_sup_seuil_hebdo: "35h effectif/semaine",
+      cp_jours: "ouvrables (lun-sam, dimanche exclu)"
+    },
+    semaines: weeks
+  };
+}
+
+function exportData(){
+  var data=collectData();
+  var json=JSON.stringify(data,null,2);
+  var fname="pointage-"+new Date().toISOString().slice(0,10)+".json";
+  function shareFallback(){
+    try {
+      var blob=new Blob([json],{type:"application/json"});
+      var file=new File([blob],fname,{type:"application/json"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:"Pointage — export"}).catch(function(){});
+        return true;
+      }
+    } catch(_){}
+    return false;
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(function(){
+      showToast("📋 Copié — colle-le dans Claude");
+    }).catch(function(){
+      if(!shareFallback()) alert("Export impossible. Réessaye après avoir touché l'écran.");
+    });
+  } else if(!shareFallback()){
+    alert("Export impossible sur ce navigateur.");
+  }
+}
+
+function takeScreenshot(btn){
+  if(!window.html2canvas){ alert("Capture en cours de chargement, réessaye dans 2 sec."); return; }
+  if(btn) btn.classList.add("busy");
+  var foot=document.querySelector(".foot");
+  var toast=document.getElementById("savetoast");
+  var prevFoot=foot?foot.style.display:"";
+  var prevToast=toast?toast.style.opacity:"";
+  if(foot) foot.style.display="none";
+  if(toast) toast.style.opacity="0";
+  var app=document.getElementById("app");
+  setTimeout(function(){
+    html2canvas(app,{backgroundColor:"#15120E",scale:2,useCORS:true,logging:false}).then(function(canvas){
+      if(foot) foot.style.display=prevFoot;
+      if(toast) toast.style.opacity=prevToast;
+      if(btn) btn.classList.remove("busy");
+      canvas.toBlob(function(blob){
+        if(!blob){ alert("Capture échouée"); return; }
+        var fname="pointage-"+new Date().toISOString().slice(0,10)+".png";
+        var file=null;
+        try { file=new File([blob],fname,{type:"image/png"}); } catch(_){}
+        if(file && navigator.canShare && navigator.canShare({files:[file]})){
+          navigator.share({files:[file],title:"Pointage"}).catch(function(){});
+        } else {
+          var url=URL.createObjectURL(blob);
+          var w=window.open();
+          if(w){ w.document.title=fname; w.document.body.style.margin="0"; w.document.body.style.background="#15120E"; w.document.body.innerHTML='<img src="'+url+'" style="max-width:100%;display:block;margin:auto">'; }
+          else { var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        }
+      },"image/png");
+    }).catch(function(err){
+      if(foot) foot.style.display=prevFoot;
+      if(toast) toast.style.opacity=prevToast;
+      if(btn) btn.classList.remove("busy");
+      alert("Erreur capture : "+(err&&err.message||err));
+    });
+  },50);
+}
+
 window.addEventListener("pagehide",flushInputs);
 window.addEventListener("blur",flushInputs);
 document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="hidden") flushInputs(); });
